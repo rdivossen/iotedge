@@ -25,23 +25,26 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
         readonly int port;
         readonly X509Certificate2 tlsCertificate;
         readonly string iotHubHostName;
+        readonly bool clientCertAuthAllowed;
 
         public AmqpModule(
             string scheme,
             int port,
             X509Certificate2 tlsCertificate,
-            string iotHubHostName)
+            string iotHubHostName,
+            bool clientCertAuthAllowed)
         {
             this.scheme = Preconditions.CheckNonWhiteSpace(scheme, nameof(scheme));
             this.port = Preconditions.CheckRange(port, 0, ushort.MaxValue, nameof(port));
             this.tlsCertificate = Preconditions.CheckNotNull(tlsCertificate, nameof(tlsCertificate));
             this.iotHubHostName = Preconditions.CheckNonWhiteSpace(iotHubHostName, nameof(iotHubHostName));
+            this.clientCertAuthAllowed = Preconditions.CheckNotNull(clientCertAuthAllowed, nameof(clientCertAuthAllowed));
         }
 
         protected override void Load(ContainerBuilder builder)
         {
             // ITransportSettings
-            builder.Register(c => new DefaultTransportSettings(this.scheme, HostName, this.port, this.tlsCertificate))
+            builder.Register(c => new DefaultTransportSettings(this.scheme, HostName, this.port, this.tlsCertificate, this.clientCertAuthAllowed))
                 .As<ITransportSettings>()
                 .SingleInstance();
 

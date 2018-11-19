@@ -76,9 +76,9 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp
             }
 
             var amqpConnection = (AmqpConnection)sender;
-            // If the AmqpConnection does not use username/password or certs, create a CbsNode for the connection
+            // If the AmqpConnection does not use username/password, create a CbsNode for the connection
             // and add it to the Extensions
-            if (!(amqpConnection.Principal is SaslPrincipal || amqpConnection.Principal is X509Principal))
+            if (!(amqpConnection.Principal is SaslPrincipal))
             {
                 ICbsNode cbsNode = new CbsNode(this.clientCredentialsFactory, this.iotHubHostName, this.authenticator, this.credentialsCache);
                 amqpConnection.Extensions.Add(cbsNode);

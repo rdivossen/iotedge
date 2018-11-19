@@ -97,7 +97,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.E2E.Test
 
             builder.RegisterModule(new HttpModule());
             builder.RegisterModule(new MqttModule(mqttSettingsConfiguration.Object, topics, this.serverCertificate, false, false, false));
-            builder.RegisterModule(new AmqpModule("amqps", 5671, this.serverCertificate, iotHubConnectionStringBuilder.HostName));
+            builder.RegisterModule(new AmqpModule("amqps", 5671, this.serverCertificate, iotHubConnectionStringBuilder.HostName, false));
         }
 
         readonly IList<string> inboundTemplates = new List<string>()

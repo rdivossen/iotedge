@@ -28,8 +28,9 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Test
         [Unit]
         public void TestInvalidConstructorInputs()
         {
+            const bool clientCertsAllowed = true;
             X509Certificate2 tlsCertificate = CertificateHelper.GenerateSelfSignedCert("TestCert");
-            var transportSettings = new DefaultTransportSettings(Scheme, HostName, Port, tlsCertificate);
+            var transportSettings = new DefaultTransportSettings(Scheme, HostName, Port, tlsCertificate, clientCertsAllowed);
             AmqpSettings amqpSettings = AmqpSettingsProvider.GetDefaultAmqpSettings(IotHubHostName,  Mock.Of<IAuthenticator>(), Mock.Of<IClientCredentialsFactory>(), Mock.Of<ILinkHandlerProvider>(), Mock.Of<IConnectionProvider>(), new NullCredentialsCache());
             var transportListenerProvider = new Mock<ITransportListenerProvider>();
             var webSockerListenerRegistry = new Mock<IWebSocketListenerRegistry>();

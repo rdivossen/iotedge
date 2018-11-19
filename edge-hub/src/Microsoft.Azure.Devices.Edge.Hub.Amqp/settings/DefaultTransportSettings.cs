@@ -9,13 +9,17 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
 
     public class DefaultTransportSettings : ITransportSettings
     {
+        readonly bool clientCertAuthAllowed;
+
         public DefaultTransportSettings(
             string scheme,
             string hostName,
             int port,
-            X509Certificate2 tlsCertificate)
+            X509Certificate2 tlsCertificate,
+            bool clientCertAuthAllowed)
         {
             this.HostName = Preconditions.CheckNonWhiteSpace(hostName, nameof(hostName));
+            this.clientCertAuthAllowed = Preconditions.CheckNotNull(clientCertAuthAllowed, nameof(clientCertAuthAllowed));
 
             var address = new UriBuilder
             {
@@ -30,21 +34,20 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
                 Port = address.Port
             };
 
-            // NOTE:
-            //  We don't support X509 client certs as an authentication mechanism
-            //  yet. When we do, we'll want to incorporate that here.
-            this.Settings = new TlsTransportSettings(tcpSettings, false)
+            var tlsSettings = new TlsTransportSettings(tcpSettings, false)
             {
                 TargetHost = address.Host,
                 Certificate = Preconditions.CheckNotNull(tlsCertificate, nameof(tlsCertificate)),
                 // NOTE: The following property doesn't appear to be used by the AMQP library.
                 //       Not sure that setting this to true/false makes any difference!
-                CheckCertificateRevocation = false
+                CheckCertificateRevocation = false,
             };
 
-            // NOTE: We don't support X509 client cert auth yet. When we do the following
-            //       line becomes relevant.
-            // tlsSettings.CertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+            if (this.clientCertAuthAllowed == true)
+            {
+                tlsSettings.CertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+            }
+            this.Settings = tlsSettings;
         }
 
         public string HostName { get; }
