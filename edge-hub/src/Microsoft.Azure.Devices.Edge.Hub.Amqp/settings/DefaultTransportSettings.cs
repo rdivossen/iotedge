@@ -34,7 +34,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
                 Port = address.Port
             };
 
-            var tlsSettings = new TlsTransportSettings(tcpSettings, false)
+            var tlsSettings = new EdgeHubTlsTransportSettings(tcpSettings, false)
             {
                 TargetHost = address.Host,
                 Certificate = Preconditions.CheckNotNull(tlsCertificate, nameof(tlsCertificate)),
