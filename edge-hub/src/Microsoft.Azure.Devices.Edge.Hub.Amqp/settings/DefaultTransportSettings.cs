@@ -5,6 +5,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
     using System;
     using System.Security.Cryptography.X509Certificates;
     using Microsoft.Azure.Amqp.Transport;
+    using Microsoft.Azure.Devices.Edge.Hub.Core;
+    using Microsoft.Azure.Devices.Edge.Hub.Core.Identity;
     using Microsoft.Azure.Devices.Edge.Util;
 
     public class DefaultTransportSettings : ITransportSettings
@@ -16,7 +18,10 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
             string hostName,
             int port,
             X509Certificate2 tlsCertificate,
-            bool clientCertAuthAllowed)
+            bool clientCertAuthAllowed,
+            string iotHubHostName,
+            IClientCredentialsFactory clientCredentialsProvider,
+            IAuthenticator authenticator)
         {
             this.HostName = Preconditions.CheckNonWhiteSpace(hostName, nameof(hostName));
             this.clientCertAuthAllowed = Preconditions.CheckNotNull(clientCertAuthAllowed, nameof(clientCertAuthAllowed));
@@ -34,7 +39,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
                 Port = address.Port
             };
 
-            var tlsSettings = new EdgeHubTlsTransportSettings(tcpSettings, false)
+            var tlsSettings = new EdgeHubTlsTransportSettings(tcpSettings, false, iotHubHostName, clientCredentialsProvider, authenticator)
             {
                 TargetHost = address.Host,
                 Certificate = Preconditions.CheckNotNull(tlsCertificate, nameof(tlsCertificate)),

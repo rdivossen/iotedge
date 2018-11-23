@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Devices.Edge.Util
     using System.Linq;
     using System.Security.Cryptography;
     using System.Security.Cryptography.X509Certificates;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Util.Edged;
     using Microsoft.Azure.Devices.Edge.Util.Edged.GeneratedCode;
@@ -112,6 +113,14 @@ namespace Microsoft.Azure.Devices.Edge.Util
             }
         }
 
+        public static (string iotHubName, string deviceId, string moduleId) ParseIdentity(X509Certificate2 certificate)
+        {
+            Preconditions.CheckNotNull(certificate);
+            string commonName = certificate.GetNameInfo(X509NameType.SimpleName, false);
+            commonName = (commonName != null) ? commonName : string.Empty;
+            return (string.Empty, commonName, string.Empty);
+        }
+
         public static bool ValidateCommonName(X509Certificate2 certificate, string commonName)
         {
             Preconditions.CheckNotNull(certificate);
@@ -196,21 +205,21 @@ namespace Microsoft.Azure.Devices.Edge.Util
             return result;
         }
 
-        //public static IEnumerable<string> ParseSujectAlternativeNames(X509Certificate2 cert)
-        //{
-        //    Regex sanRex = new Regex(@"^URI =(.*)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        public static IEnumerable<string> ParseSujectAlternativeNames(X509Certificate2 cert)
+        {
+            Regex sanRex = new Regex(@"^URI =(.*)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
-        //    var sanList = from X509Extension ext in cert.Extensions
-        //                  where ext.Oid.FriendlyName.Equals("Subject Alternative Name", StringComparison.Ordinal)
-        //                  let data = new AsnEncodedData(ext.Oid, ext.RawData)
-        //                  let text = data.Format(true)
-        //                  from line in text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-        //                  let match = sanRex.Match(line)
-        //                  where match.Success && match.Groups.Count > 0 && !string.IsNullOrEmpty(match.Groups[1].Value)
-        //                  select match.Groups[1].Value;
+            var sanList = from X509Extension ext in cert.Extensions
+                          where ext.Oid.FriendlyName.Equals("Subject Alternative Name", StringComparison.Ordinal)
+                          let data = new AsnEncodedData(ext.Oid, ext.RawData)
+                          let text = data.Format(true)
+                          from line in text.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                          let match = sanRex.Match(line)
+                          where match.Success && match.Groups.Count > 0 && !string.IsNullOrEmpty(match.Groups[1].Value)
+                          select match.Groups[1].Value;
 
-        //    return sanList;
-        //}
+            return sanList;
+        }
 
         //public static bool ValidateSanUri(X509Certificate2 certificate, string iothubHostName, string deviceId, string moduleId)
         //{
