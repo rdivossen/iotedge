@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
     using System.Collections.Generic;
     using System.Net;
     using System.Net.WebSockets;
+    using System.Security.Cryptography.X509Certificates;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Http;
     using Microsoft.Azure.Devices.Edge.Hub.Core;
@@ -56,7 +57,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
             var middleware = new WebSocketHandlingMiddleware(this._ThrowingNextDelegate(), registry);
             await middleware.Invoke(httpContext);
 
-            Mock.Get(listener).Verify(r => r.ProcessWebSocketRequestAsync(It.IsAny<WebSocket>(), It.IsAny<Option<EndPoint>>(), It.IsAny<EndPoint>(), It.IsAny<string>()));
+            Mock.Get(listener).Verify(r => r.ProcessWebSocketRequestAsync(It.IsAny<WebSocket>(), It.IsAny<Option<EndPoint>>(), It.IsAny<EndPoint>(), It.IsAny<string>(), It.IsAny<Option<X509Certificate2>>(), It.IsAny<Option<IList<X509Certificate2>>>()));
         }
 
         [Fact]
@@ -114,6 +115,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
 
         HttpContext _WebSocketRequestContext()
         {
+            // TODO fix test
             return Mock.Of<HttpContext>(ctx =>
                 ctx.WebSockets == Mock.Of<WebSocketManager>(wsm =>
                     wsm.IsWebSocketRequest) &&
@@ -131,13 +133,17 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
 
         HttpContext _ContextWithRequestedSubprotocols(params string[] subprotocols)
         {
+            // TODO fix test
             return Mock.Of<HttpContext>(ctx =>
                 ctx.WebSockets == Mock.Of<WebSocketManager>(wsm =>
                     wsm.WebSocketRequestedProtocols == subprotocols && wsm.IsWebSocketRequest
                     && wsm.AcceptWebSocketAsync(It.IsAny<string>()) == Task.FromResult(Mock.Of<WebSocket>())) &&
                 ctx.Response == Mock.Of<HttpResponse>() &&
                 ctx.Connection == Mock.Of<ConnectionInfo>(conn => conn.LocalIpAddress == new IPAddress(123) && conn.LocalPort == It.IsAny<int>()
-                                                           && conn.RemoteIpAddress == new IPAddress(123) && conn.RemotePort == It.IsAny<int>()));
+                                                     && conn.RemoteIpAddress == new IPAddress(123) && conn.RemotePort == It.IsAny<int>()
+                                                     && conn.ClientCertificate == new X509Certificate2()
+                                                     && conn.GetClientCertificateChain(ctx) == new List<X509Certificate2>()));
+
         }
 
         RequestDelegate _ThrowingNextDelegate()

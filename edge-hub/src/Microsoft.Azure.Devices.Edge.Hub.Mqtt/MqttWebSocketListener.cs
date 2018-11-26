@@ -20,7 +20,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Mqtt
     using static System.FormattableString;
 
     class MqttWebSocketListener : IWebSocketListener
-    { 
+    {
         readonly Settings settings;
         readonly MessagingBridgeFactoryFunc messagingBridgeFactoryFunc;
         readonly IAuthenticator authenticator;
@@ -56,11 +56,23 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Mqtt
 
         public string SubProtocol => Constants.WebSocketSubProtocol;
 
-        public async Task ProcessWebSocketRequestAsync(WebSocket webSocket, Option<EndPoint> localEndPoint, EndPoint remoteEndPoint, string correlationId)
+        public async Task ProcessWebSocketRequestAsync(WebSocket webSocket, Option<EndPoint> localEndPoint, EndPoint remoteEndPoint, string correlationId) =>
+            await ProcessWebSocketRequestAsync(webSocket, localEndPoint, remoteEndPoint, correlationId, Option.None<X509Certificate2>(), Option.None<IList<X509Certificate2>>());
+
+        public async Task ProcessWebSocketRequestAsync(WebSocket webSocket, Option<EndPoint> localEndPoint, EndPoint remoteEndPoint, string correlationId, Option<X509Certificate2> clientCert, Option<IList<X509Certificate2>> clientCertChain)
         {
             try
             {
                 DeviceIdentityProvider identityProvider = new DeviceIdentityProvider(this.authenticator, this.clientCredentialsFactory, true);
+
+                // if a client attempted to authenticate using a certificate issue the callback
+                clientCert.Map(
+                    cert =>
+                    {
+                        IList<X509Certificate2> chain = clientCertChain.GetOrElse(new List<X509Certificate2>());
+                        return identityProvider.RemoteCertificateValidationCallback(cert, chain);
+                    });
+
                 var serverChannel = new ServerWebSocketChannel(
                     webSocket,
                     remoteEndPoint
@@ -85,7 +97,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Mqtt
 
                 Events.Established(correlationId);
 
-                await serverChannel.WebSocketClosed.Task;  // This will wait until the websocket is closed 
+                await serverChannel.WebSocketClosed.Task;  // This will wait until the websocket is closed
             }
             catch (Exception ex) when (!ex.IsFatal())
             {
