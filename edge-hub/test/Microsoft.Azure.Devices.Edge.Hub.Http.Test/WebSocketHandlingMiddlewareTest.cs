@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
     using System.Security.Cryptography.X509Certificates;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Http;
+    using Microsoft.AspNetCore.Http.Features;
     using Microsoft.Azure.Devices.Edge.Hub.Core;
     using Microsoft.Azure.Devices.Edge.Hub.Http.Middleware;
     using Microsoft.Azure.Devices.Edge.Util;
@@ -48,9 +49,9 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
         public async Task HandlesAWebSocketRequest()
         {
             HttpContext httpContext = this._ContextWithRequestedSubprotocols("abc");
-            
+
             var listener = Mock.Of<IWebSocketListener>(wsl => wsl.SubProtocol == "abc");
-            
+
             var registry = new WebSocketListenerRegistry();
             registry.TryRegister(listener);
 
@@ -115,13 +116,16 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
 
         HttpContext _WebSocketRequestContext()
         {
-            // TODO fix test
             return Mock.Of<HttpContext>(ctx =>
                 ctx.WebSockets == Mock.Of<WebSocketManager>(wsm =>
-                    wsm.IsWebSocketRequest) &&
-                ctx.Response == Mock.Of<HttpResponse>() &&
-                ctx.Connection == Mock.Of<ConnectionInfo>(conn => conn.LocalIpAddress == new IPAddress(123) && conn.LocalPort == It.IsAny<int>()
-                    && conn.RemoteIpAddress == new IPAddress(123) && conn.RemotePort == It.IsAny<int>()));
+                    wsm.IsWebSocketRequest == true)
+                && ctx.Response == Mock.Of<HttpResponse>()
+                && ctx.Features == Mock.Of<IFeatureCollection>(fc =>
+                                                               fc.Get<ITlsConnectionFeatureExtended>() == Mock.Of<ITlsConnectionFeatureExtended>(f =>
+                                                               f.ChainElements == new List<X509Certificate2>()))
+                && ctx.Connection == Mock.Of<ConnectionInfo>(conn => conn.LocalIpAddress == new IPAddress(123) && conn.LocalPort == It.IsAny<int>()
+                                                             && conn.RemoteIpAddress == new IPAddress(123) && conn.RemotePort == It.IsAny<int>()
+                                                             && conn.ClientCertificate == new X509Certificate2()));
         }
 
         HttpContext _NonWebSocketRequestContext()
@@ -133,16 +137,17 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Test
 
         HttpContext _ContextWithRequestedSubprotocols(params string[] subprotocols)
         {
-            // TODO fix test
             return Mock.Of<HttpContext>(ctx =>
                 ctx.WebSockets == Mock.Of<WebSocketManager>(wsm =>
                     wsm.WebSocketRequestedProtocols == subprotocols && wsm.IsWebSocketRequest
-                    && wsm.AcceptWebSocketAsync(It.IsAny<string>()) == Task.FromResult(Mock.Of<WebSocket>())) &&
-                ctx.Response == Mock.Of<HttpResponse>() &&
-                ctx.Connection == Mock.Of<ConnectionInfo>(conn => conn.LocalIpAddress == new IPAddress(123) && conn.LocalPort == It.IsAny<int>()
-                                                     && conn.RemoteIpAddress == new IPAddress(123) && conn.RemotePort == It.IsAny<int>()
-                                                     && conn.ClientCertificate == new X509Certificate2()
-                                                     && conn.GetClientCertificateChain(ctx) == new List<X509Certificate2>()));
+                    && wsm.AcceptWebSocketAsync(It.IsAny<string>()) == Task.FromResult(Mock.Of<WebSocket>()))
+                && ctx.Response == Mock.Of<HttpResponse>()
+                && ctx.Features == Mock.Of<IFeatureCollection>(fc =>
+                                                               fc.Get<ITlsConnectionFeatureExtended>() == Mock.Of<ITlsConnectionFeatureExtended>(f =>
+                                                               f.ChainElements == new List<X509Certificate2>()))
+                && ctx.Connection == Mock.Of<ConnectionInfo>(conn => conn.LocalIpAddress == new IPAddress(123) && conn.LocalPort == It.IsAny<int>()
+                                                             && conn.RemoteIpAddress == new IPAddress(123) && conn.RemotePort == It.IsAny<int>()
+                                                             && conn.ClientCertificate == new X509Certificate2()));
 
         }
 

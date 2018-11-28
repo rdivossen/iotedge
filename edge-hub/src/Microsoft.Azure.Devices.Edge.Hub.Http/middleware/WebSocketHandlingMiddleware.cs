@@ -69,9 +69,13 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Http.Middleware
             }
             var remoteEndPoint = new IPEndPoint(context.Connection.RemoteIpAddress, context.Connection.RemotePort);
             var cert = await context.Connection.GetClientCertificateAsync();
-            var certChain = context.Connection.GetClientCertificateChain(context);
             Option<X509Certificate2> clientCertificate = (cert == null) ? Option.None<X509Certificate2>() :
                                                                           Option.Some<X509Certificate2>(new X509Certificate2(cert));
+            IList<X509Certificate2> certChain = null;
+            if (cert != null)
+            {
+                certChain = context.Connection.GetClientCertificateChain(context);
+            }
             Option<IList<X509Certificate2>> clientCertificateChain = (certChain == null) ? Option.None<IList<X509Certificate2>>() :
                                                                                     Option.Some<IList<X509Certificate2>>(new List<X509Certificate2>(certChain));
             await listener.ProcessWebSocketRequestAsync(webSocket, localEndPoint, remoteEndPoint, correlationId, clientCertificate, clientCertificateChain);
