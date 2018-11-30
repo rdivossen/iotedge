@@ -79,23 +79,11 @@ namespace IotEdgeQuickstart.Details
                             string exceptionDetails = e.ToString();
                             WriteToConsole("List operation exception caught", new[] { exceptionDetails });
 
-                            if (exceptionDetails.Contains("Could not list modules", StringComparison.OrdinalIgnoreCase))
-                            {
-                                try
-                                {
-                                    Console.WriteLine("Workaround: restart iotedge service.");
-                                    this.Restart().Wait();
-                                }
-                                catch (Exception restartOperationException)
-                                {
-                                    // Eat it up and let it retry in next iteration
-                                    Console.WriteLine(restartOperationException);
-                                }
-                            }
+                            this.HandleModuleVerificationException(exceptionDetails).Wait(cts.Token);
 
                             return true;
                         },
-                        TimeSpan.FromSeconds(5),
+                        TimeSpan.FromSeconds(3),
                         5);
                 }
                 catch (OperationCanceledException)
@@ -105,6 +93,33 @@ namespace IotEdgeQuickstart.Details
                 catch (Exception e)
                 {
                     throw new Exception($"Error searching for {name} module: {e}");
+                }
+            }
+        }
+
+        async Task HandleModuleVerificationException(string exceptionDetails)
+        {
+            if (exceptionDetails.Contains("Socket file could not be found", StringComparison.OrdinalIgnoreCase) ||
+                exceptionDetails.Contains("Could not list modules", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Workaround: restart iotedge service.");
+
+                try
+                {
+                    await this.Stop();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+                
+                try
+                {
+                    await this.Start();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
                 }
             }
         }
@@ -155,7 +170,7 @@ namespace IotEdgeQuickstart.Details
                 }
 
                 // note: ignore hostname for now
-                Console.WriteLine($"Run command to configure: {args}");
+                Console.WriteLine("Run Install-SecurityDaemon.ps1");
                 string[] result = await Process.RunAsync("powershell", args, cts.Token);
                 WriteToConsole("Output from Configure iotedge windows service", result);
 
@@ -209,7 +224,7 @@ namespace IotEdgeQuickstart.Details
             Environment.SetEnvironmentVariable("IOTEDGE_HOST", result.Groups[1].Value);
         }
 
-        public Task Start()
+        public async Task Start()
         {
             Console.WriteLine("Starting up iotedge service on Windows");
 
@@ -221,14 +236,31 @@ namespace IotEdgeQuickstart.Details
 
                 if (iotedgeService.Status != ServiceControllerStatus.Running)
                 {
+                    Console.WriteLine("Workaround: Explicitly remove management and workload socket files.");
+                    try
+                    {
+                        File.Delete(@"C:\ProgramData\iotedge\mgmt\sock");
+                        File.Delete(@"C:\ProgramData\iotedge\workload\sock");
+                        await Task.Delay(TimeSpan.FromSeconds(3));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                    }
+
                     iotedgeService.Start();
                     iotedgeService.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromMinutes(2));
+                    await Task.Delay(TimeSpan.FromSeconds(5));
                     iotedgeService.Refresh();
 
                     if (iotedgeService.Status != ServiceControllerStatus.Running)
                     {
                         throw new Exception("Can't start up iotedge service within timeout period.");
                     }
+
+                    // Add delay to ensure iotedge service is completely started up.
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    Console.WriteLine("iotedge service started on Windows");
                 }
                 else
                 {
@@ -239,29 +271,39 @@ namespace IotEdgeQuickstart.Details
             {
                 throw new Exception($"Error starting iotedged: {e}");
             }
-
-            // Add delay to ensure iotedge service is completely started up.
-            Task.Delay(new TimeSpan(0, 0, 0, 5));
-            Console.WriteLine("iotedge service started on Windows");
-
-            return Task.CompletedTask;
         }
 
         public async Task Stop()
         {
             try
             {
+                Console.WriteLine("Stopping iotedge service");
                 ServiceController[] services = ServiceController.GetServices();
                 var iotedgeService = services.FirstOrDefault(s => s.ServiceName.Equals("iotedge", StringComparison.OrdinalIgnoreCase));
 
                 // check service exists
                 if (iotedgeService != null)
                 {
-                    if (iotedgeService.Status == ServiceControllerStatus.Running)
+                    if (iotedgeService.Status != ServiceControllerStatus.Stopped)
                     {
                         iotedgeService.Stop();
+                        iotedgeService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromMinutes(2));
                         await Task.Delay(TimeSpan.FromSeconds(3));
+                        iotedgeService.Refresh();
+
+                        if (iotedgeService.Status != ServiceControllerStatus.Stopped)
+                        {
+                            throw new Exception("Can't stop iotedge service within timeout period.");
+                        }
                     }
+                    else
+                    {
+                        Console.WriteLine("Iotedge service is already stopped.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Iotedge service doesn't exist.");
                 }
             }
             catch (Exception e)
@@ -269,13 +311,7 @@ namespace IotEdgeQuickstart.Details
                 throw new Exception($"Error stopping iotedged: {e}");
             }
         }
-
-        public async Task Restart()
-        {
-            await Process.RunAsync("powershell", "Restart-Service iotedge");
-            await Task.Delay(TimeSpan.FromSeconds(5));
-        }
-
+        
         public async Task Reset()
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
