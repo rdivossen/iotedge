@@ -84,7 +84,7 @@ namespace IotEdgeQuickstart.Details
                             return true;
                         },
                         TimeSpan.FromSeconds(3),
-                        5);
+                        100);
                 }
                 catch (OperationCanceledException)
                 {
