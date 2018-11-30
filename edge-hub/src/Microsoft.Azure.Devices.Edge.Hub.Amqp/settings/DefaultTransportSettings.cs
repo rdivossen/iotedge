@@ -5,17 +5,26 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
     using System;
     using System.Security.Cryptography.X509Certificates;
     using Microsoft.Azure.Amqp.Transport;
+    using Microsoft.Azure.Devices.Edge.Hub.Core;
+    using Microsoft.Azure.Devices.Edge.Hub.Core.Identity;
     using Microsoft.Azure.Devices.Edge.Util;
 
     public class DefaultTransportSettings : ITransportSettings
     {
+        readonly bool clientCertAuthAllowed;
+
         public DefaultTransportSettings(
             string scheme,
             string hostName,
             int port,
-            X509Certificate2 tlsCertificate)
+            X509Certificate2 tlsCertificate,
+            bool clientCertAuthAllowed,
+            string iotHubHostName,
+            IClientCredentialsFactory clientCredentialsProvider,
+            IAuthenticator authenticator)
         {
             this.HostName = Preconditions.CheckNonWhiteSpace(hostName, nameof(hostName));
+            this.clientCertAuthAllowed = Preconditions.CheckNotNull(clientCertAuthAllowed, nameof(clientCertAuthAllowed));
 
             var address = new UriBuilder
             {
@@ -30,10 +39,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
                 Port = address.Port
             };
 
-            // NOTE:
-            //  We don't support X509 client certs as an authentication mechanism
-            //  yet. When we do, we'll want to incorporate that here.
-            this.Settings = new TlsTransportSettings(tcpSettings, false)
+            var tlsSettings = new EdgeHubTlsTransportSettings(tcpSettings, false, iotHubHostName, clientCredentialsProvider, authenticator)
             {
                 TargetHost = address.Host,
                 Certificate = Preconditions.CheckNotNull(tlsCertificate, nameof(tlsCertificate)),
@@ -42,9 +48,11 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Amqp.Settings
                 CheckCertificateRevocation = false
             };
 
-            // NOTE: We don't support X509 client cert auth yet. When we do the following
-            //       line becomes relevant.
-            // tlsSettings.CertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) => true;
+            if (this.clientCertAuthAllowed == true)
+            {
+                tlsSettings.CertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
+            }
+            this.Settings = tlsSettings;
         }
 
         public string HostName { get; }
