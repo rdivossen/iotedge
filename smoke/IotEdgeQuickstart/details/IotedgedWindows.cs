@@ -61,7 +61,7 @@ namespace IotEdgeQuickstart.Details
                         async () =>
                         {
                             string[] result = await Process.RunAsync("iotedge", "list", cts.Token);
-                            WriteToConsole("Output of iotedge list", result);
+                            WriteToConsole($"Output of iotedge list for module [{name}]", result);
 
                             status = result
                                 .Where(ln => ln.Split(null as char[], StringSplitOptions.RemoveEmptyEntries).First() == name)
