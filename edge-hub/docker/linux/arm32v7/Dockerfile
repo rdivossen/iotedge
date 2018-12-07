@@ -14,5 +14,7 @@ EXPOSE 443/tcp
 
 USER edgehubuser
 
+ENV io.netty.allocator.type unpooled
+
 CMD echo "$(date --utc +"[%Y-%m-%d %H:%M:%S %:z]"): Starting Edge Hub" && \
     exec /usr/bin/dotnet Microsoft.Azure.Devices.Edge.Hub.Service.dll

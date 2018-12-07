@@ -17,4 +17,5 @@ USER ContainerAdministrator
 RUN net user /add edgehubuser
 
 USER edgehubuser
+ENV io.netty.allocator.type unpooled
 CMD ["dotnet", "Microsoft.Azure.Devices.Edge.Hub.Service.dll"]

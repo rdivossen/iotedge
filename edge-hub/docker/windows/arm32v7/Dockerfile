@@ -13,4 +13,5 @@ EXPOSE 5671/tcp
 EXPOSE 443/tcp
 
 USER edgehubuser
+ENV io.netty.allocator.type unpooled
 CMD ["dotnet", "Microsoft.Azure.Devices.Edge.Hub.Service.dll"]
