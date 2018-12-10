@@ -54,6 +54,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
 
             ILogger logger = container.Resolve<ILoggerFactory>().CreateLogger("EdgeHub");
             logger.LogInformation("Starting Edge Hub");
+
             LogLogo(logger);
             LogVersionInfo(logger);
 
