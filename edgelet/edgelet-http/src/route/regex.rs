@@ -115,6 +115,7 @@ impl Recognizer for RegexRecognizer {
     ) -> Result<HandlerParamsPair<Self::Parameters>, StatusCode> {
         let routes = self.routes.get(method).ok_or(StatusCode::NOT_FOUND)?;
         for route in routes {
+            println!("Version sent {} route version {}", api_version, route.version);
             if api_version >= &route.version {
                 if let Some(params) = match_route(&route.pattern, path) {
                     return Ok((&*route.handler, params));
