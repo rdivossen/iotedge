@@ -95,11 +95,13 @@ pub mod route;
 mod unix;
 mod util;
 mod version;
+mod versions;
 
 pub use self::error::{BindListenerType, Error, ErrorKind, InvalidUrlReason};
 pub use self::util::proxy::MaybeProxyClient;
 pub use self::util::UrlConnector;
 pub use self::version::{ApiVersionService, API_VERSION};
+pub use self::versions::{Versions};
 
 use self::pid::PidService;
 use self::util::incoming::Incoming;

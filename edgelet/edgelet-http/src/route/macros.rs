@@ -25,10 +25,10 @@
 /// `get`, `post`, `put` and `delete`
 #[macro_export]
 macro_rules! router {
-    ($($method:ident $glob:expr => $handler:expr),+ $(,)*) => ({
+    ($($method:ident $ver:expr, $glob:expr => $handler:expr),+ $(,)*) => ({
         Router::from(
             $crate::route::RegexRoutesBuilder::default()
-            $(.$method($glob, $handler))*
+            $(.$method($glob, $ver, $handler))*
             .finish()
         )
     });
