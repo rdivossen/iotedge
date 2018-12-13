@@ -7,7 +7,7 @@ use std::default::Default;
 use hyper::{Method, StatusCode};
 use percent_encoding::percent_decode;
 use regex::Regex;
-use versions::{Versions};
+use version::Version;
 
 use super::{Builder, Handler, HandlerParamsPair, Recognizer};
 
@@ -67,7 +67,7 @@ impl Default for Parameters {
 struct RegexRoute {
     pattern: Regex,
     handler: Box<Handler<Parameters> + Sync>,
-    version: Versions,
+    version: Version,
 }
 
 #[derive(Default)]
@@ -78,7 +78,7 @@ pub struct RegexRoutesBuilder {
 impl Builder for RegexRoutesBuilder {
     type Recognizer = RegexRecognizer;
 
-    fn route<S, H>(mut self, method: Method, version: Versions, pattern: S, handler: H) -> Self
+    fn route<S, H>(mut self, method: Method, version: Version, pattern: S, handler: H) -> Self
     where
         S: AsRef<str>,
         H: Handler<<Self::Recognizer as Recognizer>::Parameters> + Sync,
@@ -110,7 +110,7 @@ impl Recognizer for RegexRecognizer {
     fn recognize(
         &self,
         method: &Method,
-        api_version: &Versions,
+        api_version: &Version,
         path: &str,
     ) -> Result<HandlerParamsPair<Self::Parameters>, StatusCode> {
         let routes = self.routes.get(method).ok_or(StatusCode::NOT_FOUND)?;

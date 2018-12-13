@@ -13,7 +13,7 @@ use hyper::{Body, Method, Request, Response, StatusCode};
 use url::form_urlencoded::parse as parse_query;
 
 use error::{Error, ErrorKind};
-use versions::Versions;
+use version::Version;
 use IntoResponse;
 
 pub mod macros;
@@ -52,7 +52,7 @@ pub trait Recognizer {
     fn recognize(
         &self,
         method: &Method,
-        version: &Versions,
+        version: &Version,
         path: &str,
     ) -> Result<HandlerParamsPair<Self::Parameters>, StatusCode>;
 }
@@ -60,7 +60,7 @@ pub trait Recognizer {
 pub trait Builder: Sized {
     type Recognizer: Recognizer;
 
-    fn route<S, H>(self, method: Method, version: Versions, pattern: S, handler: H) -> Self
+    fn route<S, H>(self, method: Method, version: Version, pattern: S, handler: H) -> Self
     where
         S: AsRef<str>,
         H: Handler<<Self::Recognizer as Recognizer>::Parameters> + Sync;
@@ -72,7 +72,7 @@ pub trait Builder: Sized {
         S: AsRef<str>,
         H: Handler<<Self::Recognizer as Recognizer>::Parameters> + Sync,
     {
-        self.route(Method::GET, version.parse::<Versions>().unwrap(), pattern, handler)
+        self.route(Method::GET, version.parse::<Version>().unwrap(), pattern, handler)
     }
 
     fn post<S, H>(self, version: &str, pattern: S, handler: H) -> Self
@@ -80,7 +80,7 @@ pub trait Builder: Sized {
         S: AsRef<str>,
         H: Handler<<Self::Recognizer as Recognizer>::Parameters> + Sync,
     {
-        self.route(Method::POST, version.parse::<Versions>().unwrap(), pattern, handler)
+        self.route(Method::POST, version.parse::<Version>().unwrap(), pattern, handler)
     }
 
     fn put<S, H>(self, version: &str, pattern: S, handler: H) -> Self
@@ -88,7 +88,7 @@ pub trait Builder: Sized {
         S: AsRef<str>,
         H: Handler<<Self::Recognizer as Recognizer>::Parameters> + Sync,
     {
-        self.route(Method::PUT, version.parse::<Versions>().unwrap(), pattern, handler)
+        self.route(Method::PUT, version.parse::<Version>().unwrap(), pattern, handler)
     }
 
     fn delete<S, H>(self, version: &str, pattern: S, handler: H) -> Self
@@ -96,7 +96,7 @@ pub trait Builder: Sized {
         S: AsRef<str>,
         H: Handler<<Self::Recognizer as Recognizer>::Parameters> + Sync,
     {
-        self.route(Method::DELETE, version.parse::<Versions>().unwrap(), pattern, handler)
+        self.route(Method::DELETE, version.parse::<Version>().unwrap(), pattern, handler)
     }
 }
 
@@ -163,7 +163,7 @@ where
                 let mut query = parse_query(query.as_bytes());
                 let (_, api_version) = query.find(|&(ref key, _)| key == "api-version")?;
                 
-                let version = api_version.into_owned().parse::<Versions>();
+                let version = api_version.into_owned().parse::<Version>();
 
                 match version 
                 {
@@ -196,3 +196,98 @@ where
 }
 
 pub use route::regex::{Parameters, RegexRecognizer, RegexRoutesBuilder};
+
+// #[cfg(test)]
+// mod tests {
+//     use failure::{Compat, Fail};
+//     use futures::future::FutureResult;
+//     use hyper::StatusCode;
+
+//     use super::*;
+
+//     #[derive(Clone)]
+//     struct TestService {
+//         status_code: StatusCode,
+//         error: bool,
+//     }
+
+//     impl Service for TestService {
+//         type ReqBody = Body;
+//         type ResBody = Body;
+//         type Error = Compat<Error>;
+//         type Future = FutureResult<Response<Self::ResBody>, Self::Error>;
+
+//         fn call(&mut self, _req: Request<Self::ReqBody>) -> Self::Future {
+//             if self.error {
+//                 future::err(Error::from(ErrorKind::ServiceError).compat())
+//             } else {
+//                 future::ok(
+//                     Response::builder()
+//                         .status(self.status_code)
+//                         .body(Body::default())
+//                         .unwrap(),
+//                 )
+//             }
+//         }
+//     }
+
+//     #[test]
+//     fn api_version_check_succeeds() {
+//         let url = &format!("http://localhost?api-version={}", API_VERSION);
+//         let req = Request::get(url).body(Body::default()).unwrap();
+//         let mut api_service = ApiVersionService::new(TestService {
+//             status_code: StatusCode::OK,
+//             error: false,
+//         });
+//         let response = Service::call(&mut api_service, req).wait().unwrap();
+//         assert_eq!(StatusCode::OK, response.status());
+//     }
+
+//     #[test]
+//     fn api_version_check_passes_status_code_through() {
+//         let url = &format!("http://localhost?api-version={}", API_VERSION);
+//         let req = Request::get(url).body(Body::default()).unwrap();
+//         let mut api_service = ApiVersionService::new(TestService {
+//             status_code: StatusCode::IM_A_TEAPOT,
+//             error: false,
+//         });
+//         let response = Service::call(&mut api_service, req).wait().unwrap();
+//         assert_eq!(StatusCode::IM_A_TEAPOT, response.status());
+//     }
+
+//     #[test]
+//     fn api_version_check_returns_error_as_response() {
+//         let url = &format!("http://localhost?api-version={}", API_VERSION);
+//         let req = Request::get(url).body(Body::default()).unwrap();
+//         let mut api_service = ApiVersionService::new(TestService {
+//             status_code: StatusCode::IM_A_TEAPOT,
+//             error: true,
+//         });
+//         let response = Service::call(&mut api_service, req).wait().unwrap();
+//         assert_eq!(StatusCode::INTERNAL_SERVER_ERROR, response.status());
+//     }
+
+//     #[test]
+//     fn api_version_does_not_exist() {
+//         let url = "http://localhost";
+//         let req = Request::get(url).body(Body::default()).unwrap();
+//         let mut api_service = ApiVersionService::new(TestService {
+//             status_code: StatusCode::OK,
+//             error: false,
+//         });
+//         let response = Service::call(&mut api_service, req).wait().unwrap();
+//         assert_eq!(StatusCode::BAD_REQUEST, response.status());
+//     }
+
+//     #[test]
+//     fn api_version_is_unsupported() {
+//         let url = "http://localhost?api-version=not-a-valid-version";
+//         let req = Request::get(url).body(Body::default()).unwrap();
+//         let mut api_service = ApiVersionService::new(TestService {
+//             status_code: StatusCode::OK,
+//             error: false,
+//         });
+//         let response = Service::call(&mut api_service, req).wait().unwrap();
+//         assert_eq!(StatusCode::BAD_REQUEST, response.status());
+//     }
+// }
