@@ -28,7 +28,7 @@ macro_rules! router {
     ($($method:ident $ver:expr, $glob:expr => $handler:expr),+ $(,)*) => ({
         Router::from(
             $crate::route::RegexRoutesBuilder::default()
-            $(.$method($glob, $ver, $handler))*
+            $(.$method($ver, $glob, $handler))*
             .finish()
         )
     });
