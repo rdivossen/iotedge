@@ -4,8 +4,8 @@
 ///
 /// ```ignore
 /// let router = router!(
-///     get "/" => index_handler,
-///     get "/hello" => hello_handler,
+///     get "2018-06-28", "/" => index_handler,
+///     get "2018-06-28", "/hello" => hello_handler,
 /// );
 /// ```
 ///
@@ -14,8 +14,8 @@
 /// ```ignore
 /// let router = Router::from(
 ///     RegexRoutesBuilder::default()
-///         .get("/", index_handler)
-///         .get("/hello", hello_handler)
+///         .get("2018-06-28", "/", index_handler)
+///         .get("2018-06-28", "/hello", hello_handler)
 ///         .finish()
 /// );
 /// ```

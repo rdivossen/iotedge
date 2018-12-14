@@ -66,16 +66,16 @@ fn route2(
 #[test]
 fn simple_route() {
     let recognizer = RegexRoutesBuilder::default()
-        .get("/route1/(?P<name>[^/]+)", route1)
-        .get("/route2/(?P<name>[^/]+)", route2)
+        .get("2018-06-28","/route1/(?P<name>[^/]+)", route1)
+        .get("2018-06-28","/route2/(?P<name>[^/]+)", route2)
         .finish();
     let router = Router::from(recognizer);
     let mut service = router.new_service().wait().unwrap();
 
-    let uri1 = "http://example.com/route1/thename";
+    let uri1 = "http://example.com/route1/thename?api-version=2018-06-28";
     let request1 = Request::get(uri1).body(Body::default()).unwrap();
 
-    let uri2 = "http://example.com/route2/thename2";
+    let uri2 = "http://example.com/route2/thename2?api-version=2018-06-28";
     let request2 = Request::get(uri2).body(Body::default()).unwrap();
 
     let response1 = service.call(request1).wait().unwrap();
@@ -101,13 +101,13 @@ fn simple_route() {
 #[test]
 fn not_found() {
     let recognizer = RegexRoutesBuilder::default()
-        .get("/route1/(?P<name>[^/]+)", route1)
-        .get("/route2/(?P<name>[^/]+)", route2)
+        .get("2018-06-28", "/route1/(?P<name>[^/]+)", route1)
+        .get("2018-06-28", "/route2/(?P<name>[^/]+)", route2)
         .finish();
     let router = Router::from(recognizer);
     let mut service = router.new_service().wait().unwrap();
 
-    let uri1 = "http://example.com/route3/thename";
+    let uri1 = "http://example.com/route3/thename?api-version=2018-06-28";
     let request1 = Request::get(uri1).body(Body::default()).unwrap();
 
     let response1 = service.call(request1).wait().unwrap();

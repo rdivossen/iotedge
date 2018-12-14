@@ -83,10 +83,10 @@ fn identities_delete(
 
 fn main() {
     let router = router!(
-        get "/" => index,
-        get "/identities" => identities_list,
-        put "/identities/(?P<name>[^/]+)" => identities_update,
-        delete "/identities/(?P<name>[^/]+)" => identities_delete,
+        get "2018-06-28", "/" => index,
+        get "2018-06-28", "/identities" => identities_list,
+        put "2018-06-28", "/identities/(?P<name>[^/]+)" => identities_update,
+        delete "2018-06-28", "/identities/(?P<name>[^/]+)" => identities_delete,
     );
 
     let addr = "tcp://0.0.0.0:8080".parse().unwrap();
